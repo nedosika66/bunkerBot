@@ -3,7 +3,7 @@ import config
 import asyncio
 
 genai.configure(api_key=config.GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5')
 
 async def generate_disaster():
     prompt = (
@@ -42,6 +42,6 @@ async def analyze_survival(disaster, survivors_text):
         f"Якщо сильна — опиши їхнє майбутнє. Пиши українською."
     )
     response = client.models.generate_content(
-        model="gemini-2.0-flash", contents=prompt
+        model="gemini-2.5", contents=prompt
     )
     return response.text
