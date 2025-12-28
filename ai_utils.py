@@ -3,6 +3,7 @@ import config
 import asyncio
 
 genai.configure(api_key=config.GEMINI_API_KEY)
+
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 async def generate_disaster():
@@ -24,11 +25,11 @@ async def generate_disaster():
         response = await model.generate_content_async(prompt)
         return response.text
     except Exception as e:
-        print(f"Gemini Error: {e}")
+        print(f"Gemini Error (generate_disaster): {e}")
         return (
             "Світ зазнав глобального збою систем. \n\n"
-            "Внаслідок цього зв'язок з реальністю втрачено, і перебування на поверхні стало неможливим. \n"
-            "Ви перебуваєте в аварійному бункері."
+            "Внаслідок цього зв'язок з реальністю втрачено. \n"
+            "Ви перебуваєте в аварійному бункері. (ШІ тимчасово недоступний)"
         )
 
 async def analyze_survival(disaster, survivors_text):
@@ -41,7 +42,10 @@ async def analyze_survival(disaster, survivors_text):
         f"Будь саркастичним, але справедливим. Якщо група слабка — опиши, як вони загинуть. "
         f"Якщо сильна — опиши їхнє майбутнє. Пиши українською."
     )
-    response = client.models.generate_content(
-        model="gemini-2.5-flash", contents=prompt
-    )
-    return response.text
+    
+    try:
+        response = await model.generate_content_async(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Gemini Error (analyze_survival): {e}")
+        return f"Не вдалося згенерувати фінал через помилку ШІ: {e}"
