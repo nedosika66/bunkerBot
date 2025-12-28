@@ -9,11 +9,7 @@ from keyboards import (
     get_game_kb, get_kick_kb, get_reveal_kb
 )
 
-try:
-    from ai_utils import generate_disaster, analyze_survival
-except ImportError:
-    async def generate_disaster(): return "🔥 Збій ШІ. Уявіть катастрофу самі."
-    async def analyze_survival(d, s): return "🏁 Гра завершена (ШІ недоступний)."
+from ai_utils import generate_disaster, analyze_survival
 
 router = Router()
 game_lock = asyncio.Lock()
