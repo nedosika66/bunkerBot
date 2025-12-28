@@ -17,8 +17,8 @@ except ImportError:
     async def generate_disaster(): return "🔥 Ядерна зима (ШІ недоступний)."
 
 router = Router()
+game_lock = asyncio.Lock()
 
-# --- СТАРТ, ЛОБІ, СТВОРЕННЯ (Без змін) ---
 @router.message(Command("start"))
 async def cmd_start(message: Message):
     args = message.text.split()
@@ -75,7 +75,6 @@ async def start_game(message: Message):
         except: pass
     await message.answer("✅ Гру розпочато!")
 
-# --- МОЯ КАРТКА ---
 @router.message(F.text == "👤 Моя картка")
 async def show_card(message: Message):
     uid = message.from_user.id
@@ -110,7 +109,6 @@ async def show_card(message: Message):
     )
     await message.answer(text, parse_mode="HTML", reply_markup=get_reveal_kb(p))
 
-# --- ВІДКРИТТЯ ---
 @router.callback_query(F.data.startswith("reveal_"))
 async def reveal_attribute_callback(call: CallbackQuery):
     attr = call.data.split("_", 1)[1]
@@ -141,7 +139,6 @@ async def reveal_attribute_callback(call: CallbackQuery):
         await call.message.edit_reply_markup(reply_markup=get_reveal_kb(player))
     else: await call.answer("Вже відкрито.")
 
-# --- СПИСОК ГРАВЦІВ ---
 @router.message(F.text == "👥 Гравці")
 async def show_players_menu(message: Message):
     uid = message.from_user.id
@@ -183,7 +180,6 @@ async def info_callback(call: CallbackQuery):
     try: await call.message.edit_text(text, reply_markup=get_players_info_kb(game), parse_mode="HTML")
     except: await call.answer()
 
-# --- ГОЛОСУВАННЯ ---
 @router.message(F.text == "📢 Голосувати")
 async def vote_menu(message: Message):
     uid = message.from_user.id
@@ -192,7 +188,6 @@ async def vote_menu(message: Message):
         if uid in g.players: game = g; break
     if not game: return
     
-    # Якщо гравець вже проголосував
     if uid in game.votes:
         target_id = game.votes[uid]
         target_name = game.players[target_id].name if target_id in game.players else "Невідомий"
@@ -216,26 +211,17 @@ async def vote_callback(call: CallbackQuery):
     await call.answer(f"Прийнято: проти {target_name}")
     await call.message.edit_text(f"✅ Голос проти <b>{target_name}</b> прийнято.", parse_mode="HTML")
     
-    # Перевіряємо, чи всі проголосували
     if len(game.votes) >= len(game.players):
         await finish_voting(game, call.bot)
 
 async def finish_voting(game: Game, bot):
-    """Підрахунок результатів голосування з нічиєю"""
     if not game.votes: return
     
-    # Рахуємо голоси
     vote_counts = Counter(game.votes.values())
-    
-    # Отримуємо рейтинг: [(user_id, count), ...]
     ranking = vote_counts.most_common()
     
-    # --- 1. ПЕРЕВІРКА НА НІЧИЮ ---
-    # Якщо є хоча б 2 людини і у першого стільки ж голосів, скільки у другого
     if len(ranking) > 1 and ranking[0][1] == ranking[1][1]:
         max_votes = ranking[0][1]
-        
-        # Знаходимо імена тих, хто набрав макс. голосів
         tied_users = [uid for uid, count in ranking if count == max_votes]
         tied_names = [game.players[uid].name for uid in tied_users]
         names_str = ", ".join(tied_names)
@@ -247,20 +233,17 @@ async def finish_voting(game: Game, bot):
             f"🔄 <b>ГОЛОСУВАННЯ ПОЧИНАЄТЬСЯ ЗАНОВО!</b>"
         )
         
-        # Скидаємо голоси
         game.votes = {}
         
         try: await bot.send_message(game.chat_id, text, parse_mode="HTML")
         except: pass
         
-        # Сповіщаємо гравців особисто
         for pid in game.players:
             try: await bot.send_message(pid, "🔄 Увага! Нічия. Голосуйте знову.")
             except: pass
             
-        return # Важливо: виходимо з функції, нікого не видаляємо!
+        return
 
-    # --- 2. ЯКЩО НІЧИЄЇ НЕМАЄ (ВИГНАННЯ) ---
     loser_id, count = ranking[0]
     loser_name = game.players[loser_id].name
     
@@ -272,13 +255,12 @@ async def finish_voting(game: Game, bot):
     except: pass
     
     del game.players[loser_id]
-    game.votes = {} # Очищаємо для наступного раунду
+    game.votes = {}
     
     for pid in game.players:
         try: await bot.send_message(pid, f"У бункері залишилось {len(game.players)} гравців.")
         except: pass
 
-# --- СТАН І ВИХІД ---
 @router.message(F.text == "📜 Стан бункера")
 async def bunker_status(message: Message):
     uid = message.from_user.id
@@ -289,6 +271,7 @@ async def bunker_status(message: Message):
     await message.answer(f"☢️ <b>КАТАСТРОФА:</b>\n{game.disaster_text}\n\nЖивих: {len(game.players)}", parse_mode="HTML")
 
 @router.message(F.text == "❌ Скасувати гру")
+@router.message(Command("stop"))
 async def cancel_game(message: Message):
     chat_id = message.chat.id
     if chat_id in games and games[chat_id].admin_id == message.from_user.id:
