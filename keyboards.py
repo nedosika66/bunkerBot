@@ -64,3 +64,10 @@ def get_reveal_kb(player):
             
     builder.adjust(2)
     return builder.as_markup()
+
+def get_players_info_kb(game):
+    builder = InlineKeyboardBuilder()
+    for uid, player in game.players.items():
+        builder.button(text=f"👤 {player.name}", callback_data=f"info_{uid}")
+    builder.adjust(2)
+    return builder.as_markup()
