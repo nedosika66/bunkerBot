@@ -6,7 +6,7 @@ from aiogram.types import Message, CallbackQuery
 from game_logic import games, games_by_invite, Game, Player
 from keyboards import (
     get_main_menu_kb, get_player_lobby_kb, get_host_lobby_kb, 
-    get_game_kb, get_kick_kb, get_reveal_kb
+    get_game_kb, get_kick_kb, get_reveal_kb, get_players_info_kb
 )
 
 from ai_utils import generate_disaster, analyze_survival
@@ -151,35 +151,46 @@ async def reveal_callback(call: CallbackQuery):
     else:
         await call.answer("Вже відкрито.")
 
-@router.message(F.text == "📜 Стан бункера")
-async def bunker_status(message: Message):
-    game = games.get(message.chat.id)
-    if not game:
-        for g in games.values():
-            if message.from_user.id in g.players: game = g; break
-    
-    if not game: return await message.answer("Гри немає.")
-    
-    await message.answer(
-        f"☢️ <b>КАТАСТРОФА:</b>\n{game.disaster_text}\n\n"
-        f"👥 Живих гравців: {len(game.players)}", 
-        parse_mode="HTML"
-    )
-
 @router.message(F.text == "👥 Гравці")
-async def show_players(message: Message):
+async def show_players_menu(message: Message):
     game = games.get(message.chat.id)
     if not game:
         for g in games.values():
             if message.from_user.id in g.players: game = g; break
             
     if not game: return await message.answer("Гри немає.")
+    await message.answer("👇 <b>Обери гравця, щоб переглянути досьє:</b>", reply_markup=get_players_info_kb(game), parse_mode="HTML")
+
+@router.callback_query(F.data.startswith("info_"))
+async def player_info_callback(call: CallbackQuery):
+    target_id = int(call.data.split("_")[1])
+    game = None
+    for g in games.values():
+        if call.from_user.id in g.players or call.from_user.id == g.admin_id: 
+            game = g; break
     
-    text = "<b>Список гравців у бункері:</b>\n"
-    for p in game.players.values():
-        text += f"- {p.name}\n"
-    
-    await message.answer(text, parse_mode="HTML")
+    if not game or target_id not in game.players:
+        return await call.answer("Гравець не знайдений.")
+
+    p = game.players[target_id]
+
+    def show(key, val):
+        return f"<b>{val}</b>" if key in p.revealed_attributes else "🔒"
+
+    text = (
+        f"👤 <b>{p.name}</b>\n\n"
+        f"👤 Біо: {show('bio', f'{p.gender}, {p.age}, {p.childbearing}')}\n"
+        f"🛠 Проф: {show('profession', f'{p.profession} ({p.profession_years} р.)')}\n"
+        f"❤️ Здор: {show('health', f'{p.health} ({p.health_severity}%)')}\n"
+        f"🎨 Хобі: {show('hobby', f'{p.hobby} ({p.hobby_years} р.)')}\n"
+        f"🎒 Багаж: {show('luggage', p.luggage)}\n"
+        f"😱 Фобія: {show('phobia', p.phobia)}\n"
+        f"💡 Факт 1: {show('fact_0', p.facts[0] if p.facts else '-')}\n"
+        f"💡 Факт 2: {show('fact_1', p.facts[1] if len(p.facts)>1 else '-')}"
+    )
+
+    try: await call.message.edit_text(text, reply_markup=get_players_info_kb(game), parse_mode="HTML")
+    except: await call.answer()
 
 @router.message(F.text == "🥾 Вигнати гравця")
 async def kick_menu(message: Message):
