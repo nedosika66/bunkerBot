@@ -7,7 +7,7 @@ genai.configure(api_key=config.GEMINI_API_KEY)
 
 # 2. Створюємо об'єкт model (а не client)
 # Використовуємо 1.5-flash, бо вона найстабільніша для цієї бібліотеки
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 async def generate_disaster():
     prompt = (
