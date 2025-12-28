@@ -4,7 +4,7 @@ import asyncio
 
 genai.configure(api_key=config.GEMINI_API_KEY)
 
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 async def generate_disaster():
     prompt = (
