@@ -26,10 +26,10 @@ class Player:
 
     def generate_card(self):
         self.gender = random.choice(["Чоловік", "Жінка"])
-        self.age = random.randint(18, 90)
+        self.age = random.randint(16, 75)
 
         base_status = random.choices(
-            ["Здатний(а) до розмноження", "Безпліддя / Чайлдфрі"], 
+            ["Здатний(а) до розмноження", "Безпліддя"], 
             weights=[75, 25], 
             k=1
         )[0]
