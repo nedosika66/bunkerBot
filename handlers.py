@@ -34,6 +34,18 @@ async def cmd_start(message: Message):
         else: await message.answer("Невірний код.")
     else: await message.answer("Вітаю в Бункері!", reply_markup=get_main_menu_kb())
 
+@router.message(Command("reset"))
+async def force_reset_game(message: Message):
+    chat_id = message.chat.id
+    if chat_id in games:
+        game = games[chat_id]
+        if game.invite_code in games_by_invite:
+            del games_by_invite[game.invite_code]
+        del games[chat_id]
+        await message.answer("🗑 Гру скинуто примусово!", reply_markup=get_main_menu_kb())
+    else:
+        await message.answer("Немає активної гри.")
+
 @router.message(F.text == "Створити гру")
 async def create_game(message: Message):
     chat_id = message.chat.id
